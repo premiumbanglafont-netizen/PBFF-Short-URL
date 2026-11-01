@@ -1,6 +1,6 @@
 // PBFF Short URL Generator
 // আপনার Cloudflare Worker URL এখানে বসান:
-const API_BASE = "https://pbff.premiumbanglafont.workers.dev";
+const API_BASE = "https://pbff.pbff.workers.dev";
 
 const $ = (id) => document.getElementById(id);
 
