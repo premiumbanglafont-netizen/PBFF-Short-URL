@@ -1,5 +1,5 @@
+
 // PBFF Short URL Generator
-// আপনার Cloudflare Worker URL এখানে বসান:
 const API_BASE = "https://pbff.pbff.workers.dev";
 
 const $ = (id) => document.getElementById(id);
@@ -36,7 +36,7 @@ function escapeHtml(value) {
 
 function formatDate(value) {
   if (!value) return "N/A";
-  const date = new Date(value.replace(" ", "T") + "Z");
+  const date = new Date(String(value).replace(" ", "T") + "Z");
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
@@ -64,7 +64,6 @@ function displayResult(data) {
   result.classList.remove("hidden");
   shortUrlElement.href = latestShortUrl;
   shortUrlElement.textContent = latestShortUrl;
-
   qrcodeElement.replaceChildren();
 
   if (typeof QRCode !== "undefined") {
@@ -84,9 +83,6 @@ function displayResult(data) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const url = longUrl.value.trim();
-  const alias = customCode.value.trim();
-
   createBtn.disabled = true;
   createBtn.textContent = "Creating...";
   showMessage("");
@@ -96,8 +92,8 @@ form.addEventListener("submit", async (event) => {
     const data = await api("/api/shorten", {
       method: "POST",
       body: JSON.stringify({
-        url,
-        customCode: alias
+        url: longUrl.value.trim(),
+        customCode: customCode.value.trim()
       })
     });
 
@@ -106,7 +102,6 @@ form.addEventListener("submit", async (event) => {
 
     longUrl.value = "";
     customCode.value = "";
-
     await loadLinks();
   } catch (error) {
     showMessage(error.message || "লিংক তৈরি করা যায়নি।", "error");
@@ -138,7 +133,7 @@ $("shareBtn").addEventListener("click", async () => {
       });
     } else {
       await navigator.clipboard.writeText(latestShortUrl);
-      showMessage("Share সুবিধা নেই, লিংকটি কপি করা হয়েছে।", "success");
+      showMessage("লিংক কপি করা হয়েছে।", "success");
     }
   } catch (error) {
     if (error.name !== "AbortError") {
@@ -185,16 +180,24 @@ function renderLinks(links) {
           ${escapeHtml(item.short_url)}
         </a>
       </td>
-      <td class="original">
-        ${escapeHtml(item.original_url)}
-      </td>
+      <td class="original">${escapeHtml(item.original_url)}</td>
       <td>${Number(item.clicks || 0).toLocaleString()}</td>
       <td>${escapeHtml(formatDate(item.created_at))}</td>
-      <td>
+      <td class="link-actions">
         <button class="secondary copy-link"
-                type="button"
-                data-url="${escapeHtml(item.short_url)}">
+          type="button"
+          data-url="${escapeHtml(item.short_url)}">
           Copy
+        </button>
+        <a class="secondary open-link"
+          href="${escapeHtml(item.short_url)}"
+          target="_blank" rel="noopener noreferrer">
+          Open
+        </a>
+        <button class="delete-link"
+          type="button"
+          data-code="${escapeHtml(item.code)}">
+          Delete
         </button>
       </td>
     </tr>
@@ -215,17 +218,51 @@ async function loadLinks() {
 }
 
 linksBody.addEventListener("click", async (event) => {
-  const button = event.target.closest(".copy-link");
-  if (!button) return;
+  const copyButton = event.target.closest(".copy-link");
+  const deleteButton = event.target.closest(".delete-link");
 
-  try {
-    await navigator.clipboard.writeText(button.dataset.url);
-    button.textContent = "Copied!";
-    setTimeout(() => {
-      button.textContent = "Copy";
-    }, 1500);
-  } catch {
-    showMessage("কপি করা যায়নি।", "error");
+  if (copyButton) {
+    try {
+      await navigator.clipboard.writeText(copyButton.dataset.url);
+      copyButton.textContent = "Copied!";
+      setTimeout(() => {
+        copyButton.textContent = "Copy";
+      }, 1500);
+    } catch {
+      showMessage("কপি করা যায়নি।", "error");
+    }
+    return;
+  }
+
+  if (deleteButton) {
+    const code = deleteButton.dataset.code;
+
+    if (!code) {
+      showMessage("লিংকের কোড পাওয়া যায়নি।", "error");
+      return;
+    }
+
+    const confirmed = confirm(
+      `আপনি কি "${code}" Short Link-টি স্থায়ীভাবে মুছে ফেলতে চান?`
+    );
+
+    if (!confirmed) return;
+
+    deleteButton.disabled = true;
+    deleteButton.textContent = "Deleting...";
+
+    try {
+      await api(`/api/links/${encodeURIComponent(code)}`, {
+        method: "DELETE"
+      });
+
+      showMessage("Short Link মুছে ফেলা হয়েছে।", "success");
+      await loadLinks();
+    } catch (error) {
+      showMessage(error.message || "লিংক মুছতে সমস্যা হয়েছে।", "error");
+      deleteButton.disabled = false;
+      deleteButton.textContent = "Delete";
+    }
   }
 });
 
