@@ -4,7 +4,7 @@
 
 ## 🌐 ওয়েবসাইট ভিজিট করুন
 
-👉 **[PBFF Short URL Generator খুলুন](https://premiumbanglafont-netizen.github.io/PBFF-Short-URL/)**
+👉 **[PBFF Short URL Generator খুলুন](https://pbff.pbff.workers.dev/KbCj6se)**
 
 উপরের লিংকে ক্লিক করলেই সরাসরি আমাদের ওয়েবসাইটে যেতে পারবেন।
 
